@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falah Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50" x-data="adminApp()" x-init="init()">
+    <!-- Login Modal -->
+    <div x-show="!isAuthenticated" x-cloak class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-2xl font-bold">ف</span>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Falah Admin Panel</h2>
+                <p class="text-gray-600">Sign in to access the dashboard</p>
+            </div>
+            
+            <form @submit.prevent="login()">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                    <input type="email" x-model="loginForm.email" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                    <input type="password" x-model="loginForm.password" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <button type="submit" :disabled="loading"
+                        class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50">
+                    <span x-show="!loading">Sign In</span>
+                    <span x-show="loading">Signing In...</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div x-show="isAuthenticated" x-cloak class="flex h-screen bg-gray-100">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white shadow-lg">
+            <div class="p-6 border-b">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold">ف</span>
+                    </div>
+                    <div class="ml-3">
+                        <h1 class="text-xl font-bold text-gray-800">Falah Admin</h1>
+                        <p class="text-sm text-gray-600">Islamic Finance</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="mt-6">
+                <a @click="currentView = 'dashboard'" 
+                   :class="currentView === 'dashboard' ? 'bg-green-50 text-green-700 border-r-2 border-green-500' : 'text-gray-600 hover:bg-gray-50'"
+                   class="flex items-center px-6 py-3 cursor-pointer">
+                    <i class="fas fa-chart-line mr-3"></i>
+                    Dashboard
+                </a>
+                
+                <a @click="currentView = 'users'" 
+                   :class="currentView === 'users' ? 'bg-green-50 text-green-700 border-r-2 border-green-500' : 'text-gray-600 hover:bg-gray-50'"
+                   class="flex items-center px-6 py-3 cursor-pointer">
+                    <i class="fas fa-users mr-3"></i>
+                    Users
+                </a>
+                
+                <a @click="currentView = 'subscriptions'" 
+                   :class="currentView === 'subscriptions' ? 'bg-green-50 text-green-700 border-r-2 border-green-500' : 'text-gray-600 hover:bg-gray-50'"
+                   class="flex items-center px-6 py-3 cursor-pointer">
+                    <i class="fas fa-credit-card mr-3"></i>
+                    Subscriptions
+                </a>
+                
+                <a @click="currentView = 'analytics'" 
+                   :class="currentView === 'analytics' ? 'bg-green-50 text-green-700 border-r-2 border-green-500' : 'text-gray-600 hover:bg-gray-50'"
+                   class="flex items-center px-6 py-3 cursor-pointer">
+                    <i class="fas fa-chart-bar mr-3"></i>
+                    Analytics
+                </a>
+                
+                <a @click="currentView = 'stocks'" 
+                   :class="currentView === 'stocks' ? 'bg-green-50 text-green-700 border-r-2 border-green-500' : 'text-gray-600 hover:bg-gray-50'"
+                   class="flex items-center px-6 py-3 cursor-pointer">
+                    <i class="fas fa-chart-candlestick mr-3"></i>
+                    Stock Analytics
+                </a>
+                
+                <a @click="currentView = 'settings'" 
+                   :class="currentView === 'settings' ? 'bg-green-50 text-green-700 border-r-2 border-green-500' : 'text-gray-600 hover:bg-gray-50'"
+                   class="flex items-center px-6 py-3 cursor-pointer">
+                    <i class="fas fa-cog mr-3"></i>
+                    Settings
+                </a>
+                
+                <a @click="currentView = 'logs'" 
+                   :class="currentView === 'logs' ? 'bg-green-50 text-green-700 border-r-2 border-green-500' : 'text-gray-600 hover:bg-gray-50'"
+                   class="flex items-center px-6 py-3 cursor-pointer">
+                    <i class="fas fa-file-alt mr-3"></i>
+                    System Logs
+                </a>
+            </nav>
+            
+            <div class="absolute bottom-0 w-64 p-6 border-t">
+                <button @click="logout()" class="flex items-center text-gray-600 hover:text-red-600">
+                    <i class="fas fa-sign-out-alt mr-3"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-gray-800" x-text="getViewTitle()"></h2>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-sm text-gray-600">
+                            Last updated: <span x-text="new Date().toLocaleTimeString()"></span>
+                        </div>
+                        <button @click="refreshData()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                            <i class="fas fa-refresh mr-2"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <div x-show="currentView === 'dashboard'" class="p-6">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-blue-100 rounded-lg">
+                                <i class="fas fa-users text-blue-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Total Users</p>
+                                <p class="text-2xl font-bold text-gray-900" x-text="dashboardStats.totalUsers || 0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-green-100 rounded-lg">
+                                <i class="fas fa-crown text-green-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Pro Subscribers</p>
+                                <p class="text-2xl font-bold text-gray-900" x-text="dashboardStats.activeSubscriptions || 0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-yellow-100 rounded-lg">
+                                <i class="fas fa-rupee-sign text-yellow-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Monthly Revenue</p>
+                                <p class="text-2xl font-bold text-gray-900">₹<span x-text="dashboardStats.monthlyRevenue || 0"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-purple-100 rounded-lg">
+                                <i class="fas fa-chart-line text-purple-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Conversion Rate</p>
+                                <p class="text-2xl font-bold text-gray-900"><span x-text="dashboardStats.conversionRate || 0"></span>%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">User Growth</h3>
+                        <canvas id="userGrowthChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Revenue Trend</h3>
+                        <canvas id="revenueChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users View -->
+            <div x-show="currentView === 'users'" class="p-6">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-6 border-b">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold">User Management</h3>
+                            <div class="flex space-x-4">
+                                <input type="text" x-model="userFilters.search" @input="loadUsers()" 
+                                       placeholder="Search users..." 
+                                       class="px-3 py-2 border border-gray-300 rounded-md">
+                                <select x-model="userFilters.subscriptionStatus" @change="loadUsers()"
+                                        class="px-3 py-2 border border-gray-300 rounded-md">
+                                    <option value="">All Subscriptions</option>
+                                    <option value="active">Active</option>
+                                    <option value="cancelled">Cancelled</option>
+                                    <option value="expired">Expired</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subscription</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <template x-for="user in users" :key="user.id">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                                                    <i class="fas fa-user text-gray-600"></i>
+                                                </div>
+                                                <div class="ml-4">
+                                                    <div class="text-sm font-medium text-gray-900" x-text="user.raw_user_meta_data?.full_name || 'N/A'"></div>
+                                                    <div class="text-sm text-gray-500" x-text="user.email"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span :class="user.user_subscriptions?.[0]?.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                                                  class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full">
+                                                <span x-text="user.user_subscriptions?.[0]?.plan_type || 'Free'"></span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <span x-text="new Date(user.created_at).toLocaleDateString()"></span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <button @click="viewUserDetails(user.id)" class="text-green-600 hover:text-green-900 mr-3">
+                                                View Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="px-6 py-3 border-t flex items-center justify-between">
+                        <div class="text-sm text-gray-700">
+                            Showing <span x-text="((userPagination.currentPage - 1) * 20) + 1"></span> to 
+                            <span x-text="Math.min(userPagination.currentPage * 20, userPagination.totalCount)"></span> of 
+                            <span x-text="userPagination.totalCount"></span> results
+                        </div>
+                        <div class="flex space-x-2">
+                            <button @click="loadUsers(userPagination.currentPage - 1)" 
+                                    :disabled="userPagination.currentPage <= 1"
+                                    class="px-3 py-1 border rounded disabled:opacity-50">
+                                Previous
+                            </button>
+                            <button @click="loadUsers(userPagination.currentPage + 1)" 
+                                    :disabled="userPagination.currentPage >= userPagination.totalPages"
+                                    class="px-3 py-1 border rounded disabled:opacity-50">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other views would be implemented similarly -->
+            <div x-show="currentView === 'subscriptions'" class="p-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Subscription Management</h3>
+                    <p class="text-gray-600">Subscription management interface coming soon...</p>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'analytics'" class="p-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Advanced Analytics</h3>
+                    <p class="text-gray-600">Advanced analytics dashboard coming soon...</p>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'stocks'" class="p-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Stock Analytics</h3>
+                    <p class="text-gray-600">Stock performance analytics coming soon...</p>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'settings'" class="p-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">App Settings</h3>
+                    <p class="text-gray-600">Application settings management coming soon...</p>
+                </div>
+            </div>
+
+            <div x-show="currentView === 'logs'" class="p-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">System Logs</h3>
+                    <p class="text-gray-600">System logs viewer coming soon...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function adminApp() {
+            return {
+                isAuthenticated: false,
+                loading: false,
+                currentView: 'dashboard',
+                loginForm: {
+                    email: '',
+                    password: ''
+                },
+                dashboardStats: {},
+                users: [],
+                userFilters: {
+                    search: '',
+                    subscriptionStatus: ''
+                },
+                userPagination: {
+                    currentPage: 1,
+                    totalPages: 1,
+                    totalCount: 0
+                },
+                
+                async init() {
+                    // Check if already authenticated
+                    const token = localStorage.getItem('admin_token');
+                    if (token) {
+                        this.isAuthenticated = true;
+                        await this.loadDashboardStats();
+                    }
+                },
+                
+                async login() {
+                    this.loading = true;
+                    try {
+                        // Mock authentication - replace with real API call
+                        if (this.loginForm.email === 'admin@falah.com' && this.loginForm.password === 'admin123') {
+                            const token = 'mock-admin-token';
+                            localStorage.setItem('admin_token', token);
+                            this.isAuthenticated = true;
+                            await this.loadDashboardStats();
+                        } else {
+                            alert('Invalid credentials');
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        alert('Login failed');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                logout() {
+                    localStorage.removeItem('admin_token');
+                    this.isAuthenticated = false;
+                    this.currentView = 'dashboard';
+                },
+                
+                async loadDashboardStats() {
+                    try {
+                        // Mock data - replace with real API call
+                        this.dashboardStats = {
+                            totalUsers: 1247,
+                            activeSubscriptions: 89,
+                            monthlyRevenue: 17711,
+                            conversionRate: 7.14,
+                            todaySignups: 12
+                        };
+                        
+                        // Initialize charts
+                        setTimeout(() => {
+                            this.initCharts();
+                        }, 100);
+                    } catch (error) {
+                        console.error('Error loading dashboard stats:', error);
+                    }
+                },
+                
+                async loadUsers(page = 1) {
+                    try {
+                        // Mock data - replace with real API call
+                        this.users = [
+                            {
+                                id: '1',
+                                email: 'user1@example.com',
+                                created_at: '2024-01-15T10:00:00Z',
+                                raw_user_meta_data: { full_name: 'Ahmed Ali' },
+                                user_subscriptions: [{ plan_type: 'pro', status: 'active' }]
+                            },
+                            {
+                                id: '2',
+                                email: 'user2@example.com',
+                                created_at: '2024-01-14T09:30:00Z',
+                                raw_user_meta_data: { full_name: 'Fatima Khan' },
+                                user_subscriptions: [{ plan_type: 'free', status: 'active' }]
+                            }
+                        ];
+                        
+                        this.userPagination = {
+                            currentPage: page,
+                            totalPages: 5,
+                            totalCount: 100
+                        };
+                    } catch (error) {
+                        console.error('Error loading users:', error);
+                    }
+                },
+                
+                async refreshData() {
+                    switch (this.currentView) {
+                        case 'dashboard':
+                            await this.loadDashboardStats();
+                            break;
+                        case 'users':
+                            await this.loadUsers();
+                            break;
+                    }
+                },
+                
+                getViewTitle() {
+                    const titles = {
+                        dashboard: 'Dashboard',
+                        users: 'User Management',
+                        subscriptions: 'Subscriptions',
+                        analytics: 'Analytics',
+                        stocks: 'Stock Analytics',
+                        settings: 'Settings',
+                        logs: 'System Logs'
+                    };
+                    return titles[this.currentView] || 'Dashboard';
+                },
+                
+                viewUserDetails(userId) {
+                    alert(`View details for user: ${userId}`);
+                },
+                
+                initCharts() {
+                    // User Growth Chart
+                    const userGrowthCtx = document.getElementById('userGrowthChart');
+                    if (userGrowthCtx) {
+                        new Chart(userGrowthCtx, {
+                            type: 'line',
+                            data: {
+                                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                                datasets: [{
+                                    label: 'New Users',
+                                    data: [65, 89, 123, 156, 189, 247],
+                                    borderColor: 'rgb(34, 197, 94)',
+                                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Revenue Chart
+                    const revenueCtx = document.getElementById('revenueChart');
+                    if (revenueCtx) {
+                        new Chart(revenueCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                                datasets: [{
+                                    label: 'Revenue (₹)',
+                                    data: [12950, 17711, 23450, 19800, 25600, 31200],
+                                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                                    borderColor: 'rgb(34, 197, 94)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
